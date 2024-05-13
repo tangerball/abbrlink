@@ -1,0 +1,45 @@
+{
+  "name": "abbrlink",
+  "version": "0.0.0",
+  "license": "MIT",
+  "author": "tangerball",
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "abbrlink",
+    "astro",
+    "vitepress"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "unbuild --stub",
+    "build": "unbuild",
+    "release": "release-it",
+    "prepare": "husky install",
+    "format": "prettier --write \"**/*.{js,ts,json,html}\""
+  },
+  "engines": {
+    "node": "^16.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/tangerball/vite-plugin-abbrlink/issues"
+  },
+  "homepage": "https://github.com/tangerball/vite-plugin-abbrlink#readme",
+  "dependencies": {
+    "chokidar": "^3.6.0",
+    "crc": "^4.3.2",
+    "fast-glob": "^3.3.2",
+    "gray-matter": "^4.0.3"
+  }
+}

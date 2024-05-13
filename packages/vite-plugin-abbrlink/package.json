@@ -1,0 +1,47 @@
+{
+  "name": "vite-plugin-abbrlink",
+  "version": "0.0.0",
+  "license": "MIT",
+  "author": "tangerball",
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "vite",
+    "vite-plugin",
+    "vite-plugin-abbrlink",
+    "abbrlink",
+    "astro"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "unbuild --stub",
+    "build": "unbuild",
+    "release": "release-it",
+    "format": "prettier --write \"**/*.{js,ts,json,html}\""
+  },
+  "engines": {
+    "node": "^16.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/tangerball/vite-plugin-abbrlink/issues"
+  },
+  "homepage": "https://github.com/tangerball/vite-plugin-abbrlink#readme",
+  "peerDependencies": {
+    "vite": "^5.2.11"
+  },
+  "dependencies": {
+    "vite": "^5.2.11",
+    "abbrlink": "workspace:*"
+  }
+}

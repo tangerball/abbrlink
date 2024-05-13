@@ -1,0 +1,7 @@
+{
+  "name": "config-release-it",
+  "version": "0.1.1",
+  "license": "MIT",
+  "main": ".release-it.js",
+  "private": true
+}
