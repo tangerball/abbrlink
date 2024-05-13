@@ -12,7 +12,7 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "release": "turbo release --concurrency=1",
-    "clean": "rimraf **/dist/*",
+    "clean": "rimraf \"**/{lib,bin,dist,node_modules}\" && rimraf \"node_modules/!(rimraf|.bin)\"",
     "prepare": "husky install",
     "format": "prettier --write \"**/*.{js,ts,json,html}\""
   },
@@ -36,7 +36,7 @@
     "lint-staged": "^15.2.2",
     "prettier": "^3.2.5",
     "release-it": "^17.2.1",
-    "rimraf": "^5.0.7",
+    "rimraf": "^3.0.2",
     "tslib": "^2.6.2",
     "typescript": "^5.4.5"
   },
