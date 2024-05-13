@@ -34,11 +34,12 @@
     "node": "^16.0.0"
   },
   "bugs": {
-    "url": "https://github.com/tangerball/vite-plugin-abbrlink/issues"
+    "url": "https://github.com/tangerball/abbrlink/tree/master/packages/vite-plugin-abbrlink/issues"
   },
-  "homepage": "https://github.com/tangerball/vite-plugin-abbrlink#readme",
+  "homepage": "https://github.com/tangerball/abbrlink/tree/master/packages/vite-plugin-abbrlink#readme",
   "peerDependencies": {
-    "vite": "^5.2.11"
+    "vite": "^5.2.11",
+    "abbrlink": "workspace:*"
   },
   "dependencies": {
     "vite": "^5.2.11",

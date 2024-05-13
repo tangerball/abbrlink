@@ -33,9 +33,9 @@
     "node": "^16.0.0"
   },
   "bugs": {
-    "url": "https://github.com/tangerball/vite-plugin-abbrlink/issues"
+    "url": "https://github.com/tangerball/abbrlink/issues"
   },
-  "homepage": "https://github.com/tangerball/vite-plugin-abbrlink#readme",
+  "homepage": "https://github.com/tangerball/abbrlink/tree/master/packages/cli#readme",
   "dependencies": {
     "chokidar": "^3.6.0",
     "crc": "^4.3.2",
