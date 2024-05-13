@@ -8,9 +8,6 @@ module.exports = (path = []) => {
       '@release-it/conventional-changelog': {
         path: '.',
         infile: 'CHANGELOG.md',
-        context: {
-          linkCompare: true,
-        },
         header: '# Changelog',
         ignoreRecommendedBump: true,
         preset: {
@@ -65,17 +62,6 @@ module.exports = (path = []) => {
               hidden: true,
             },
           ],
-        },
-        writerOpts: {
-          transform(commit, context) {
-            const jira = new RegExp(/MC-[0-9]+/, 'i')
-            if (jira.test(commit.scope)) {
-              const [issue] = commit.scope.match(jira)
-              commit.scope = `[${issue}](${jira_url}/${issue})`
-            }
-            commit.shortHash = commit.hash.substring(0, 7)
-            return commit
-          },
         },
         gitRawCommitsOpts: {
           path: '.',
