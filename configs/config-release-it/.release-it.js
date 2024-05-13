@@ -48,10 +48,12 @@ module.exports = (path = []) => {
             {
               type: 'build',
               section: '👷‍♂️ Build System | 构建系统',
+              hidden: true,
             },
             {
               type: 'ci',
               section: '🔧 Continuous Integration | 持续集成',
+              hidden: true,
             },
             {
               type: 'chore',
