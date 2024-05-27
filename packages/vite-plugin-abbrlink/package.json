@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-abbrlink",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "author": "tangerball",
   "files": [
@@ -39,10 +39,10 @@
   "homepage": "https://github.com/tangerball/abbrlink/tree/master/packages/vite-plugin-abbrlink#readme",
   "peerDependencies": {
     "vite": "^5.2.11",
-    "abbrlink": "workspace:*"
+    "abbrlink": "1.0.1"
   },
   "dependencies": {
     "vite": "^5.2.11",
-    "abbrlink": "workspace:*"
+    "abbrlink": "1.0.1"
   }
 }
