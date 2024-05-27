@@ -58,6 +58,6 @@ https://tangerball.com/posts/66c8
 ```
 
 ```
-crc32 & hex
+crc32
 https://tangerball.com/posts/8ddf18fb
 ```
