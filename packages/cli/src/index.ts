@@ -5,24 +5,58 @@ import chokidar from 'chokidar'
 import { Options } from './model/config'
 
 // Ensure the value is an array
-function ensureArray<T>(value: T | T[]): T[] {
+export function ensureArray<T>(value: T | T[]): T[] {
   return Array.isArray(value) ? value : [value]
 }
 
 // Normalize the path
-function normalizePath(p: string): string {
+export function normalizePath(p: string): string {
   return p.startsWith('/') ? p.slice(1) : p
+}
+
+/**
+ * @description Checks if a file is a draft file
+ * @param filePath Path to the file
+ * @param frontMatter Optional front matter data for additional check
+ * @returns true if the file is identified as a draft, false otherwise
+ */
+function isDraftFile(filePath: string, frontMatter?: any): boolean {
+  // Strategy 1: Check file path for draft indicators
+  const pathLower = filePath.toLowerCase()
+  
+  // Check if path contains drafts directory
+  if (pathLower.includes('/drafts/') || pathLower.includes('/_drafts/')) {
+    return true
+  }
+
+  // Check if filename starts with underscore
+  const fileName = filePath.split('/').pop() || ''
+  if (fileName.startsWith('_')) {
+    return true
+  }
+
+  // Strategy 2: Check front matter for draft flag
+  if (frontMatter && frontMatter.draft === true) {
+    return true
+  }
+
+  return false
 }
 
 export type { Options }
 
-export default ({ paths, ...data }: Options) => {
-  const abbrLink = new AbbrLink(data)
+/**
+ * @description: Main function to create abbrlink instance
+ * @param options: Configuration options
+ * @returns: Abbrlink instance with methods for different build tools
+ */
+export default function createAbbrlink(options: Options) {
+  const abbrLink = new AbbrLink(options)
 
   let watcher: chokidar.FSWatcher | null = null
 
   // Convert the input paths to an array and remove the leading slash from each path
-  const configPaths = ensureArray(paths).map(normalizePath)
+  const configPaths = ensureArray(options.paths).map(normalizePath)
 
   /**
    * Get Markdown files under the specified paths
@@ -65,7 +99,7 @@ export default ({ paths, ...data }: Options) => {
             await updateFileContent(filePath, newMarkdown)
           }
         } catch (error) {
-          console.log(`🚀 ~ Error processing file1 ${filePath}`, error)
+          console.log(`🚀 ~ Error processing file ${filePath}`, error)
         }
       }),
     )
@@ -108,10 +142,209 @@ export default ({ paths, ...data }: Options) => {
     }
   }
 
+  /**
+   * @description: Get Vite plugin
+   */
+  const getVitePlugin = () => {
+    return {
+      name: 'vite-plugin-abbrLink',
+      async buildStart() {
+        await initMdsSetAbbrLink()
+      },
+      async configResolved() {
+        await watchMdFiles()
+      },
+      closeBundle() {
+        closeWatcher()
+      },
+    }
+  }
+
+  /**
+   * @description: Get Astro integration
+   */
+  const getAstroIntegration = () => {
+    return {
+      name: 'astro-abbrlink',
+      hooks: {
+        'astro:build:start': async () => {
+          await initMdsSetAbbrLink()
+        },
+        'astro:server:start': async () => {
+          await watchMdFiles()
+        },
+        'astro:server:stop': async () => {
+          closeWatcher()
+        },
+      },
+    }
+  }
+
+  /**
+   * @description: Get Next.js plugin
+   */
+  const getNextjsPlugin = () => {
+    return {
+      name: 'nextjs-abbrlink',
+      async module(_module: any) {
+        // Initialize abbrlink when the module is loaded
+        await initMdsSetAbbrLink()
+        // Start watching files
+        watchMdFiles()
+        
+        // Cleanup on process exit
+        process.on('exit', closeWatcher)
+        
+        return _module
+      },
+    }
+  }
+
+  /**
+   * @description: Get Nuxt.js module
+   */
+  const getNuxtModule = () => {
+    return {
+      name: 'nuxt-abbrlink',
+      setup() {
+        // Initialize abbrlink
+        initMdsSetAbbrLink()
+        // Start watching files
+        watchMdFiles()
+        
+        // Cleanup on process exit
+        process.on('exit', closeWatcher)
+      },
+    }
+  }
+
+  /**
+   * @description: Get Gatsby plugin
+   */
+  const getGatsbyPlugin = () => {
+    return {
+      name: 'gatsby-plugin-abbrlink',
+      async onPreBootstrap() {
+        // Initialize abbrlink before bootstrap
+        await initMdsSetAbbrLink()
+      },
+      async onCreateNode({ node }: any) {
+        // Watch for Markdown files
+        if (node.internal.type === 'MarkdownRemark') {
+          await setAbbrLink(node.fileAbsolutePath)
+        }
+      },
+    }
+  }
+
+  /**
+   * @description: Get Hexo plugin
+   */
+  const getHexoPlugin = () => {
+    return {
+      name: 'hexo-plugin-abbrlink',
+      init(hexo: any) {
+        // Register filter for post processing
+        hexo.extend.filter.register('before_post_render', async (data: any) => {
+          // Get file path from data
+          const filePath = data.source || data.path
+          if (filePath) {
+            await setAbbrLink(filePath)
+          }
+          return data
+        })
+      },
+    }
+  }
+
+  /**
+   * @description: Get Eleventy plugin
+   */
+  const getEleventyPlugin = () => {
+    return {
+      name: 'eleventy-plugin-abbrlink',
+      init(eleventyConfig: any) {
+        // Add transform for Markdown files
+        eleventyConfig.addTransform('abbrlink', async (content: string, outputPath: string) => {
+          if (outputPath && outputPath.endsWith('.md')) {
+            await setAbbrLink(outputPath)
+          }
+          return content
+        })
+      },
+    }
+  }
+
+  /**
+   * @description: Get VuePress plugin
+   */
+  const getVuePressPlugin = () => {
+    return {
+      name: 'vuepress-plugin-abbrlink',
+      onInitialized() {
+        // Initialize abbrlink
+        initMdsSetAbbrLink()
+      },
+      extendsMarkdown(md: any) {
+        // Add abbrlink processing
+        const defaultRender = md.render
+        md.render = async (src: string, env: any) => {
+          if (env.filePath && env.filePath.endsWith('.md')) {
+            await setAbbrLink(env.filePath)
+          }
+          return defaultRender(src, env)
+        }
+      },
+    }
+  }
+
+  /**
+   * @description: Get SvelteKit plugin
+   */
+  const getSvelteKitPlugin = () => {
+    return {
+      name: 'sveltekit-plugin-abbrlink',
+      async handle({ event, resolve }: any) {
+        // Initialize abbrlink on first request
+        await initMdsSetAbbrLink()
+        // Start watching files
+        watchMdFiles()
+        
+        // Cleanup on process exit
+        process.on('exit', closeWatcher)
+        
+        return resolve(event)
+      },
+    }
+  }
+
+  /**
+   * @description: Get Remix plugin
+   */
+  const getRemixPlugin = () => {
+    return {
+      name: 'remix-plugin-abbrlink',
+      async buildStart() {
+        // Initialize abbrlink on build start
+        await initMdsSetAbbrLink()
+      },
+    }
+  }
+
   return {
     initMdsSetAbbrLink,
     watchMdFiles,
     closeWatcher,
     setAbbrLink,
+    getVitePlugin,
+    getAstroIntegration,
+    getNextjsPlugin,
+    getNuxtModule,
+    getGatsbyPlugin,
+    getHexoPlugin,
+    getEleventyPlugin,
+    getVuePressPlugin,
+    getSvelteKitPlugin,
+    getRemixPlugin,
   }
 }
