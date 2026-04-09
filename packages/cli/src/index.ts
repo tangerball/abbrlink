@@ -82,12 +82,15 @@ export default function createAbbrlink(options: Options) {
   }
 
   /**
-   * Update the content of a Markdown file
+   * @description Update the content of a Markdown file
+   * @param filePath Path to the file
+   * @param newMarkdown Object containing the new markdown content and header
    */
   const updateFileContent = async (filePath: string, newMarkdown: any) => {
     try {
       await writeFile(filePath, newMarkdown.value, 'utf-8')
-      console.log(`🚀 ~ Generate abbrlink for ${filePath} file: ${newMarkdown.header?.abbrlink}`)
+      const fieldName = options.fieldName || 'abbrlink'
+      console.log(`🚀 ~ Generated abbrlink for ${filePath} file: ${newMarkdown.header?.[fieldName]}`)
     } catch (error) {
       console.error(`Error writing to file ${filePath}`, error)
     }
