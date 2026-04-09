@@ -64,15 +64,25 @@ class AbbrLink {
   /**
    * @description Generates a unique abbreviated link for each article
    * @param frontMatter The front matter information of the article
+   * @returns The generated abbrlink string
    */
   async abbrLinkHelper(frontMatter: FrontMatter): Promise<string> {
     const formatDate = this.localDateTimeString(frontMatter.date)
     let abbrLink: string
+
+    // Calculate CRC based on configured algorithm
     if (this.config.alg === 'crc32') {
       abbrLink = crc32(frontMatter.title + formatDate).toString(16)
     } else {
       abbrLink = crc16(frontMatter.title + formatDate).toString(16)
     }
+
+    // Convert to decimal if rep is 'dec'
+    if (this.config.rep === 'dec') {
+      // Parse hex string back to number then to decimal string
+      abbrLink = parseInt(abbrLink, 16).toString(10)
+    }
+
     return abbrLink || '0'
   }
 
