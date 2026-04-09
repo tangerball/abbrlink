@@ -94,20 +94,44 @@ export default function createAbbrlink(options: Options) {
   }
 
   /**
-   * @description:  Set abbreviation links
-   * @param {string} path The path to the article
+   * @description Set abbreviation links for files
+   * @param path Single file path or array of file paths
    */
   const setAbbrLink = async (path: string | string[]) => {
+    // Clear conflict set before processing a new batch
+    abbrLink.clearConflictSet()
+
     await Promise.all(
       ensureArray(path).map(async (filePath) => {
         try {
           const _data = await abbrLink.getMdData(filePath)
           const { data: frontMatter } = _data
-          if (!abbrLink.hasAbbrLink(frontMatter)) {
-            // Rebuild the Markdown file
-            const newMarkdown = await abbrLink.generateAbbrLink(_data)
-            // Write the modified content back to the Markdown file
-            await updateFileContent(filePath, newMarkdown)
+
+          // Check if this is a draft file and if we should skip it
+          if (!options.drafts && isDraftFile(filePath, frontMatter)) {
+            console.log(`⏭️ Skipping draft file: ${filePath}`)
+            return
+          }
+
+          // Check if we should process this file
+          // - If force mode is enabled, always process
+          // - Otherwise, only process if no abbrlink exists
+          const shouldProcess = options.force || !abbrLink.hasAbbrLink(frontMatter)
+
+          if (shouldProcess) {
+            // Rebuild the Markdown file with abbrlink
+            const newMarkdown = await abbrLink.generateAbbrLink(_data, filePath)
+
+            // Only write back to file if writeback is enabled
+            if (options.writeback !== false) {
+              await updateFileContent(filePath, newMarkdown)
+            } else {
+              console.log(
+                `🔍 Generated abbrlink for ${filePath} (dry run): ${
+                  newMarkdown.header?.[options.fieldName || 'abbrlink']
+                }`
+              )
+            }
           }
         } catch (error) {
           console.log(`🚀 ~ Error processing file ${filePath}`, error)
