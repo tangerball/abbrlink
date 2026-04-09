@@ -44,10 +44,12 @@ class AbbrLink {
 
   /**
    * @description Checks if the article data already has an abbreviated link
-   * @param data The data of the article
+   * @param data The front matter data of the article
+   * @returns The existing abbrlink value if present, empty string otherwise
    */
   hasAbbrLink(data: any): string {
-    return data?.abbrlink || ''
+    // Use the configured field name instead of hardcoding 'abbrlink'
+    return data?.[this.config.fieldName] || ''
   }
 
   /**
