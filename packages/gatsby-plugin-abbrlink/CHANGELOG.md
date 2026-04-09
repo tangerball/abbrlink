@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 (2026-04-09)
+
+
+### ✨ Features | 新功能
+
+* update all plugins with new features and documentation ([cd54cdd](https://github.com/tangerball/abbrlink/commit/cd54cdd88b18a96d26919f56f4a1bfed300414a7))
+
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 

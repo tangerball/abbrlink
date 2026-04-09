@@ -1,6 +1,6 @@
 {
   "name": "gatsby-plugin-abbrlink",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "author": "tangerball",
   "files": [
@@ -36,6 +36,9 @@
   },
   "homepage": "https://github.com/tangerball/abbrlink/tree/master/packages/gatsby-plugin-abbrlink#readme",
   "dependencies": {
-    "abbrlink": "workspace:*"
+    "abbrlink": "1.0.1"
+  },
+  "peerDependencies": {
+    "abbrlink": "1.0.1"
   }
 }
