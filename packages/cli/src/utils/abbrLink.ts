@@ -8,14 +8,28 @@ import { AbbrLinkConfig, FrontMatter } from '../model/abbrLink'
 class AbbrLink {
   private config: {
     alg: AbbrLinkConfig['alg']
+    rep: NonNullable<AbbrLinkConfig['rep']>
     timeOffsetInHours: number
+    fieldName: NonNullable<AbbrLinkConfig['fieldName']>
   }
 
-  constructor(config: Partial<{ alg: AbbrLinkConfig['alg']; timeOffsetInHours: number }> = {}) {
-    // Default configuration
+  /**
+   * @description Set of generated abbrlinks for conflict detection
+   */
+  private generatedAbbrlinks: Set<string> = new Set()
+
+  constructor(config: Partial<{
+    alg: AbbrLinkConfig['alg']
+    rep: AbbrLinkConfig['rep']
+    timeOffsetInHours: number
+    fieldName: AbbrLinkConfig['fieldName']
+  }> = {}) {
+    // Default configuration - maintaining backward compatibility
     this.config = {
-      alg: 'crc32', // Use crc32 algorithm by default
-      timeOffsetInHours: 8, // Add time zone offset configuration
+      alg: 'crc32',
+      rep: 'hex',
+      timeOffsetInHours: 8,
+      fieldName: 'abbrlink',
       ...config,
     }
   }
