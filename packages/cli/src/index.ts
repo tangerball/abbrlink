@@ -59,14 +59,25 @@ export default function createAbbrlink(options: Options) {
   const configPaths = ensureArray(options.paths).map(normalizePath)
 
   /**
-   * Get Markdown files under the specified paths
+   * @description Get Markdown files under the specified paths
+   * @param _paths Array of paths to search
+   * @returns Array of absolute file paths
    */
   const getFileMds = async (_paths: string[]): Promise<string[]> => {
+    // Prepare ignore patterns
+    const ignorePatterns = ['node_modules', '**/__tests__']
+
+    // Add user-specified exclude patterns if provided
+    if (options.exclude) {
+      const excludeArray = ensureArray(options.exclude)
+      ignorePatterns.push(...excludeArray)
+    }
+
     return await fastGlob(_paths, {
       cwd: process.cwd(),
       absolute: true,
       onlyFiles: true,
-      ignore: ['node_modules', '**/__tests__'],
+      ignore: ignorePatterns,
     })
   }
 
