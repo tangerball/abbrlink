@@ -39,10 +39,10 @@
   "homepage": "https://github.com/tangerball/abbrlink/tree/master/packages/vite-plugin-abbrlink#readme",
   "peerDependencies": {
     "vite": "^5.2.11",
-    "abbrlink": "1.0.1"
+    "abbrlink": "workspace:*"
   },
   "dependencies": {
     "vite": "^5.2.11",
-    "abbrlink": "1.0.1"
+    "abbrlink": "workspace:*"
   }
 }

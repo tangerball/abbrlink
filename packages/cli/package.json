@@ -11,7 +11,12 @@
   "keywords": [
     "abbrlink",
     "astro",
-    "vitepress"
+    "vitepress",
+    "vite",
+    "nextjs",
+    "nuxt",
+    "markdown",
+    "static-site-generator"
   ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",

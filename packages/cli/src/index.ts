@@ -51,7 +51,12 @@ export type { Options }
  * @returns: Abbrlink instance with methods for different build tools
  */
 export default function createAbbrlink(options: Options) {
-  const abbrLink = new AbbrLink(options)
+  const abbrLink = new AbbrLink({
+    alg: options.alg,
+    rep: options.rep,
+    timeOffsetInHours: options.timeOffsetInHours,
+    fieldName: options.fieldName
+  })
 
   let watcher: chokidar.FSWatcher | null = null
 

@@ -1,0 +1,41 @@
+{
+  "name": "gatsby-plugin-abbrlink",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": "tangerball",
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "gatsby",
+    "gatsby-plugin",
+    "abbrlink",
+    "markdown"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "unbuild --stub",
+    "build": "unbuild",
+    "release": "release-it"
+  },
+  "engines": {
+    "node": "^16.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/tangerball/abbrlink/issues"
+  },
+  "homepage": "https://github.com/tangerball/abbrlink/tree/master/packages/gatsby-plugin-abbrlink#readme",
+  "dependencies": {
+    "abbrlink": "workspace:*"
+  }
+}
