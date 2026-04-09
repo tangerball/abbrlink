@@ -20,7 +20,7 @@
     },
     "release": {
       "cache": false,
-      "dependsOn": ["^release"],
+      "dependsOn": ["build", "^release"],
       "interactive": true
     }
   }

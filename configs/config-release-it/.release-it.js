@@ -85,7 +85,7 @@ module.exports = (path = []) => {
       requireCommitsFail: false,
     },
     npm: {
-      publish: false,
+      publish: true,
       versionArgs: ['--workspaces false'],
     },
     github: {
