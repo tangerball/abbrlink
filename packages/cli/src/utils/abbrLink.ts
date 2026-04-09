@@ -87,15 +87,57 @@ class AbbrLink {
   }
 
   /**
+   * @description Checks if an abbrlink has already been generated and handles conflicts
+   * @param abbrlink The abbrlink to check
+   * @param filePath The file path for logging purposes
+   * @returns A unique abbrlink (original if no conflict, with suffix if conflict)
+   */
+  checkAndResolveConflict(abbrlink: string, filePath: string): string {
+    let uniqueAbbrlink = abbrlink
+    let suffix = 2
+
+    // Loop until we find an unused abbrlink
+    while (this.generatedAbbrlinks.has(uniqueAbbrlink)) {
+      console.warn(
+        `⚠️ Conflict detected for file ${filePath}: abbrlink "${uniqueAbbrlink}" already exists. Generating alternative...`
+      )
+      uniqueAbbrlink = `${abbrlink}-${suffix}`
+      suffix++
+    }
+
+    // Add the unique abbrlink to our set
+    this.generatedAbbrlinks.add(uniqueAbbrlink)
+    return uniqueAbbrlink
+  }
+
+  /**
+   * @description Clears the conflict detection set (useful for reinitialization)
+   */
+  clearConflictSet(): void {
+    this.generatedAbbrlinks.clear()
+  }
+
+  /**
    * @description Generates a unique abbreviated link for each article and updates the front matter information
    * @param value An object containing the content and data of the article
+   * @param filePath The file path for conflict detection and logging
+   * @returns An object containing the updated header and file content
    */
   async generateAbbrLink(
     value: matter.GrayMatterFile<any>,
+    filePath?: string,
   ): Promise<{ header: any; value: string }> {
     const frontMatter = value.data as FrontMatter
-    const abbrLink = await this.abbrLinkHelper(frontMatter)
-    const _frontMatter = { ...frontMatter, abbrlink: abbrLink }
+    let abbrLink = await this.abbrLinkHelper(frontMatter)
+
+    // Check for conflicts if filePath is provided
+    if (filePath) {
+      abbrLink = this.checkAndResolveConflict(abbrLink, filePath)
+    }
+
+    // Update front matter with the configured field name
+    const _frontMatter = { ...frontMatter, [this.config.fieldName]: abbrLink }
+
     // Regenerate the file content with the new front matter
     const newFileContent = matter.stringify(value.content || '', _frontMatter, {
       language: 'yaml',
