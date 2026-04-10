@@ -1,0 +1,154 @@
+'use strict';
+
+const fastGlob = require('fast-glob');
+const crc = require('crc');
+const matter = require('gray-matter');
+const promises = require('fs/promises');
+const chokidar = require('chokidar');
+
+function _interopDefaultCompat (e) { return e && typeof e === 'object' && 'default' in e ? e.default : e; }
+
+const fastGlob__default = /*#__PURE__*/_interopDefaultCompat(fastGlob);
+const matter__default = /*#__PURE__*/_interopDefaultCompat(matter);
+const chokidar__default = /*#__PURE__*/_interopDefaultCompat(chokidar);
+
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => {
+  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  return value;
+};
+class AbbrLink {
+  constructor(config = {}) {
+    __publicField(this, "config");
+    this.config = {
+      alg: "crc32",
+      // Use crc32 algorithm by default
+      timeOffsetInHours: 8,
+      // Add time zone offset configuration
+      ...config
+    };
+  }
+  /**
+   * @description Gets the Markdown data of the article
+   * @param path The path to the article
+   */
+  async getMdData(path) {
+    return matter__default.read(path);
+  }
+  /**
+   * @description Checks if the article data already has an abbreviated link
+   * @param data The data of the article
+   */
+  hasAbbrLink(data) {
+    return data?.abbrlink || "";
+  }
+  /**
+   * @description Generates a local date and time string
+   * @param date A Date object
+   */
+  localDateTimeString(date = /* @__PURE__ */ new Date()) {
+    const offsetMs = this.config.timeOffsetInHours * 60 * 60 * 1e3;
+    return new Date(date.getTime() + offsetMs).toISOString().slice(0, 19).replace("T", " ");
+  }
+  /**
+   * @description Generates a unique abbreviated link for each article
+   * @param frontMatter The front matter information of the article
+   */
+  async abbrLinkHelper(frontMatter) {
+    const formatDate = this.localDateTimeString(frontMatter.date);
+    let abbrLink;
+    if (this.config.alg === "crc32") {
+      abbrLink = crc.crc32(frontMatter.title + formatDate).toString(16);
+    } else {
+      abbrLink = crc.crc16(frontMatter.title + formatDate).toString(16);
+    }
+    return abbrLink || "0";
+  }
+  /**
+   * @description Generates a unique abbreviated link for each article and updates the front matter information
+   * @param value An object containing the content and data of the article
+   */
+  async generateAbbrLink(value) {
+    const frontMatter = value.data;
+    const abbrLink = await this.abbrLinkHelper(frontMatter);
+    const _frontMatter = { ...frontMatter, abbrlink: abbrLink };
+    const newFileContent = matter__default.stringify(value.content || "", _frontMatter, {
+      language: "yaml"
+    });
+    return { header: _frontMatter, value: newFileContent };
+  }
+}
+
+function ensureArray(value) {
+  return Array.isArray(value) ? value : [value];
+}
+function normalizePath(p) {
+  return p.startsWith("/") ? p.slice(1) : p;
+}
+const index = ({ paths, ...data }) => {
+  const abbrLink = new AbbrLink(data);
+  let watcher = null;
+  const configPaths = ensureArray(paths).map(normalizePath);
+  const getFileMds = async (_paths) => {
+    return await fastGlob__default(_paths, {
+      cwd: process.cwd(),
+      absolute: true,
+      onlyFiles: true,
+      ignore: ["node_modules", "**/__tests__"]
+    });
+  };
+  const updateFileContent = async (filePath, newMarkdown) => {
+    try {
+      await promises.writeFile(filePath, newMarkdown.value, "utf-8");
+      console.log(`\u{1F680} ~ Generate abbrlink for ${filePath} file: ${newMarkdown.header?.abbrlink}`);
+    } catch (error) {
+      console.error(`Error writing to file ${filePath}`, error);
+    }
+  };
+  const setAbbrLink = async (path) => {
+    await Promise.all(
+      ensureArray(path).map(async (filePath) => {
+        try {
+          const _data = await abbrLink.getMdData(filePath);
+          const { data: frontMatter } = _data;
+          if (!abbrLink.hasAbbrLink(frontMatter)) {
+            const newMarkdown = await abbrLink.generateAbbrLink(_data);
+            await updateFileContent(filePath, newMarkdown);
+          }
+        } catch (error) {
+          console.log(`\u{1F680} ~ Error processing file1 ${filePath}`, error);
+        }
+      })
+    );
+  };
+  const initMdsSetAbbrLink = async () => {
+    const _paths = await getFileMds(configPaths);
+    await setAbbrLink(_paths);
+  };
+  const watchMdFiles = () => {
+    watcher = chokidar__default.watch(
+      configPaths.map((path) => process.cwd() + "/" + path),
+      {
+        persistent: true,
+        ignoreInitial: false
+      }
+    );
+    watcher.on("change", async (path) => {
+      await setAbbrLink(path);
+    });
+  };
+  const closeWatcher = () => {
+    if (watcher) {
+      watcher.close();
+    }
+  };
+  return {
+    initMdsSetAbbrLink,
+    watchMdFiles,
+    closeWatcher,
+    setAbbrLink
+  };
+};
+
+module.exports = index;

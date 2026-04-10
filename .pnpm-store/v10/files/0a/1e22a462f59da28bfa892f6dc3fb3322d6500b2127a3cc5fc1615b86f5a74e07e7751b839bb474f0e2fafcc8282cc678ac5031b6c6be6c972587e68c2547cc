@@ -1,0 +1,359 @@
+import fastGlob from 'fast-glob';
+import { crc32, crc16 } from 'crc';
+import matter from 'gray-matter';
+import { writeFile } from 'fs/promises';
+import chokidar from 'chokidar';
+
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => {
+  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  return value;
+};
+class AbbrLink {
+  constructor(config = {}) {
+    __publicField(this, "config");
+    /**
+     * @description Set of generated abbrlinks for conflict detection
+     */
+    __publicField(this, "generatedAbbrlinks", /* @__PURE__ */ new Set());
+    this.config = {
+      alg: "crc32",
+      rep: "hex",
+      timeOffsetInHours: 8,
+      fieldName: "abbrlink",
+      ...config
+    };
+  }
+  /**
+   * @description Gets the Markdown data of the article
+   * @param path The path to the article
+   */
+  async getMdData(path) {
+    return matter.read(path);
+  }
+  /**
+   * @description Checks if the article data already has an abbreviated link
+   * @param data The front matter data of the article
+   * @returns The existing abbrlink value if present, empty string otherwise
+   */
+  hasAbbrLink(data) {
+    return data?.[this.config.fieldName] || "";
+  }
+  /**
+   * @description Generates a local date and time string
+   * @param date A Date object
+   */
+  localDateTimeString(date = /* @__PURE__ */ new Date()) {
+    const offsetMs = this.config.timeOffsetInHours * 60 * 60 * 1e3;
+    return new Date(date.getTime() + offsetMs).toISOString().slice(0, 19).replace("T", " ");
+  }
+  /**
+   * @description Generates a unique abbreviated link for each article
+   * @param frontMatter The front matter information of the article
+   * @returns The generated abbrlink string
+   */
+  async abbrLinkHelper(frontMatter) {
+    const formatDate = this.localDateTimeString(frontMatter.date);
+    let abbrLink;
+    if (this.config.alg === "crc32") {
+      abbrLink = crc32(frontMatter.title + formatDate).toString(16);
+    } else {
+      abbrLink = crc16(frontMatter.title + formatDate).toString(16);
+    }
+    if (this.config.rep === "dec") {
+      abbrLink = parseInt(abbrLink, 16).toString(10);
+    }
+    return abbrLink || "0";
+  }
+  /**
+   * @description Checks if an abbrlink has already been generated and handles conflicts
+   * @param abbrlink The abbrlink to check
+   * @param filePath The file path for logging purposes
+   * @returns A unique abbrlink (original if no conflict, with suffix if conflict)
+   */
+  checkAndResolveConflict(abbrlink, filePath) {
+    let uniqueAbbrlink = abbrlink;
+    let suffix = 2;
+    while (this.generatedAbbrlinks.has(uniqueAbbrlink)) {
+      console.warn(
+        `\u26A0\uFE0F Conflict detected for file ${filePath}: abbrlink "${uniqueAbbrlink}" already exists. Generating alternative...`
+      );
+      uniqueAbbrlink = `${abbrlink}-${suffix}`;
+      suffix++;
+    }
+    this.generatedAbbrlinks.add(uniqueAbbrlink);
+    return uniqueAbbrlink;
+  }
+  /**
+   * @description Clears the conflict detection set (useful for reinitialization)
+   */
+  clearConflictSet() {
+    this.generatedAbbrlinks.clear();
+  }
+  /**
+   * @description Generates a unique abbreviated link for each article and updates the front matter information
+   * @param value An object containing the content and data of the article
+   * @param filePath The file path for conflict detection and logging
+   * @returns An object containing the updated header and file content
+   */
+  async generateAbbrLink(value, filePath) {
+    const frontMatter = value.data;
+    let abbrLink = await this.abbrLinkHelper(frontMatter);
+    if (filePath) {
+      abbrLink = this.checkAndResolveConflict(abbrLink, filePath);
+    }
+    const _frontMatter = { ...frontMatter, [this.config.fieldName]: abbrLink };
+    const newFileContent = matter.stringify(value.content || "", _frontMatter, {
+      language: "yaml"
+    });
+    return { header: _frontMatter, value: newFileContent };
+  }
+}
+
+function ensureArray(value) {
+  return Array.isArray(value) ? value : [value];
+}
+function normalizePath(p) {
+  return p.startsWith("/") ? p.slice(1) : p;
+}
+function isDraftFile(filePath, frontMatter) {
+  const pathLower = filePath.toLowerCase();
+  if (pathLower.includes("/drafts/") || pathLower.includes("/_drafts/")) {
+    return true;
+  }
+  const fileName = filePath.split("/").pop() || "";
+  if (fileName.startsWith("_")) {
+    return true;
+  }
+  if (frontMatter && frontMatter.draft === true) {
+    return true;
+  }
+  return false;
+}
+function createAbbrlink(options) {
+  const abbrLink = new AbbrLink({
+    alg: options.alg,
+    rep: options.rep,
+    timeOffsetInHours: options.timeOffsetInHours,
+    fieldName: options.fieldName
+  });
+  let watcher = null;
+  const configPaths = ensureArray(options.paths).map(normalizePath);
+  const getFileMds = async (_paths) => {
+    const ignorePatterns = ["node_modules", "**/__tests__"];
+    if (options.exclude) {
+      const excludeArray = ensureArray(options.exclude);
+      ignorePatterns.push(...excludeArray);
+    }
+    return await fastGlob(_paths, {
+      cwd: process.cwd(),
+      absolute: true,
+      onlyFiles: true,
+      ignore: ignorePatterns
+    });
+  };
+  const updateFileContent = async (filePath, newMarkdown) => {
+    try {
+      await writeFile(filePath, newMarkdown.value, "utf-8");
+      const fieldName = options.fieldName || "abbrlink";
+      console.log(`\u{1F680} ~ Generated abbrlink for ${filePath} file: ${newMarkdown.header?.[fieldName]}`);
+    } catch (error) {
+      console.error(`Error writing to file ${filePath}`, error);
+    }
+  };
+  const setAbbrLink = async (path) => {
+    abbrLink.clearConflictSet();
+    await Promise.all(
+      ensureArray(path).map(async (filePath) => {
+        try {
+          const _data = await abbrLink.getMdData(filePath);
+          const { data: frontMatter } = _data;
+          if (!options.drafts && isDraftFile(filePath, frontMatter)) {
+            console.log(`\u23ED\uFE0F Skipping draft file: ${filePath}`);
+            return;
+          }
+          const shouldProcess = options.force || !abbrLink.hasAbbrLink(frontMatter);
+          if (shouldProcess) {
+            const newMarkdown = await abbrLink.generateAbbrLink(_data, filePath);
+            if (options.writeback !== false) {
+              await updateFileContent(filePath, newMarkdown);
+            } else {
+              console.log(
+                `\u{1F50D} Generated abbrlink for ${filePath} (dry run): ${newMarkdown.header?.[options.fieldName || "abbrlink"]}`
+              );
+            }
+          }
+        } catch (error) {
+          console.log(`\u{1F680} ~ Error processing file ${filePath}`, error);
+        }
+      })
+    );
+  };
+  const initMdsSetAbbrLink = async () => {
+    const _paths = await getFileMds(configPaths);
+    await setAbbrLink(_paths);
+  };
+  const watchMdFiles = () => {
+    watcher = chokidar.watch(
+      configPaths.map((path) => process.cwd() + "/" + path),
+      {
+        persistent: true,
+        ignoreInitial: false
+      }
+    );
+    watcher.on("change", async (path) => {
+      await setAbbrLink(path);
+    });
+  };
+  const closeWatcher = () => {
+    if (watcher) {
+      watcher.close();
+    }
+  };
+  const getVitePlugin = () => {
+    return {
+      name: "vite-plugin-abbrLink",
+      async buildStart() {
+        await initMdsSetAbbrLink();
+      },
+      async configResolved() {
+        await watchMdFiles();
+      },
+      closeBundle() {
+        closeWatcher();
+      }
+    };
+  };
+  const getAstroIntegration = () => {
+    return {
+      name: "astro-abbrlink",
+      hooks: {
+        "astro:build:start": async () => {
+          await initMdsSetAbbrLink();
+        },
+        "astro:server:start": async () => {
+          await watchMdFiles();
+        },
+        "astro:server:stop": async () => {
+          closeWatcher();
+        }
+      }
+    };
+  };
+  const getNextjsPlugin = () => {
+    return {
+      name: "nextjs-abbrlink",
+      async module(_module) {
+        await initMdsSetAbbrLink();
+        watchMdFiles();
+        process.on("exit", closeWatcher);
+        return _module;
+      }
+    };
+  };
+  const getNuxtModule = () => {
+    return {
+      name: "nuxt-abbrlink",
+      setup() {
+        initMdsSetAbbrLink();
+        watchMdFiles();
+        process.on("exit", closeWatcher);
+      }
+    };
+  };
+  const getGatsbyPlugin = () => {
+    return {
+      name: "gatsby-plugin-abbrlink",
+      async onPreBootstrap() {
+        await initMdsSetAbbrLink();
+      },
+      async onCreateNode({ node }) {
+        if (node.internal.type === "MarkdownRemark") {
+          await setAbbrLink(node.fileAbsolutePath);
+        }
+      }
+    };
+  };
+  const getHexoPlugin = () => {
+    return {
+      name: "hexo-plugin-abbrlink",
+      init(hexo) {
+        hexo.extend.filter.register("before_post_render", async (data) => {
+          const filePath = data.source || data.path;
+          if (filePath) {
+            await setAbbrLink(filePath);
+          }
+          return data;
+        });
+      }
+    };
+  };
+  const getEleventyPlugin = () => {
+    return {
+      name: "eleventy-plugin-abbrlink",
+      init(eleventyConfig) {
+        eleventyConfig.addTransform("abbrlink", async (content, outputPath) => {
+          if (outputPath && outputPath.endsWith(".md")) {
+            await setAbbrLink(outputPath);
+          }
+          return content;
+        });
+      }
+    };
+  };
+  const getVuePressPlugin = () => {
+    return {
+      name: "vuepress-plugin-abbrlink",
+      onInitialized() {
+        initMdsSetAbbrLink();
+      },
+      extendsMarkdown(md) {
+        const defaultRender = md.render;
+        md.render = async (src, env) => {
+          if (env.filePath && env.filePath.endsWith(".md")) {
+            await setAbbrLink(env.filePath);
+          }
+          return defaultRender(src, env);
+        };
+      }
+    };
+  };
+  const getSvelteKitPlugin = () => {
+    return {
+      name: "sveltekit-plugin-abbrlink",
+      async handle({ event, resolve }) {
+        await initMdsSetAbbrLink();
+        watchMdFiles();
+        process.on("exit", closeWatcher);
+        return resolve(event);
+      }
+    };
+  };
+  const getRemixPlugin = () => {
+    return {
+      name: "remix-plugin-abbrlink",
+      async buildStart() {
+        await initMdsSetAbbrLink();
+      }
+    };
+  };
+  return {
+    initMdsSetAbbrLink,
+    watchMdFiles,
+    closeWatcher,
+    setAbbrLink,
+    getVitePlugin,
+    getAstroIntegration,
+    getNextjsPlugin,
+    getNuxtModule,
+    getGatsbyPlugin,
+    getHexoPlugin,
+    getEleventyPlugin,
+    getVuePressPlugin,
+    getSvelteKitPlugin,
+    getRemixPlugin
+  };
+}
+
+export { createAbbrlink as default, ensureArray, normalizePath };

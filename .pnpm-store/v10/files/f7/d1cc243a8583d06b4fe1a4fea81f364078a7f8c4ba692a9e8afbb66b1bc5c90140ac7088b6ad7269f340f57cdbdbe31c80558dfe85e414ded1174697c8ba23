@@ -1,0 +1,123 @@
+/**
+ * @description:  Abbreviated link configuration
+ */
+interface AbbrLinkConfig {
+    /**
+     * @description:  Algorithm used to generate abbrlink
+     * @default 'crc32'
+     */
+    alg: 'crc32' | 'crc16';
+    /**
+     * @description:  Representation format of abbrlink
+     * @default 'hex'
+     * @description 'hex' for hexadecimal (e.g., a1b2c3d4), 'dec' for decimal (e.g., 123456789)
+     */
+    rep?: 'hex' | 'dec';
+    /**
+     * @description:  Time zone offset in hours
+     * @default 8
+     */
+    timeOffsetInHours?: number;
+    /**
+     * @description:  Custom field name in front matter
+     * @default 'abbrlink'
+     * @description Allows using a custom field name instead of 'abbrlink' in the front matter
+     */
+    fieldName?: string;
+}
+
+interface Options extends AbbrLinkConfig {
+    /**
+     * @description: Paths to Markdown files to process
+     * @description Supports glob patterns, can be a single string or an array of strings
+     */
+    paths: string | string[];
+    /**
+     * @description: Whether to process draft files
+     * @default false
+     * @description If true, draft files will also be processed; if false, draft files are skipped
+     */
+    drafts?: boolean;
+    /**
+     * @description: Force mode - regenerate abbrlink even if it already exists
+     * @default false
+     * @description When true, ignores existing abbrlink values and recalculates for all files
+     */
+    force?: boolean;
+    /**
+     * @description: Whether to write changes back to the actual Markdown files
+     * @default true
+     * @description When false, abbrlink is only generated in memory without modifying source files
+     */
+    writeback?: boolean;
+    /**
+     * @description: File patterns to exclude from processing
+     * @description Supports glob patterns, can be a single string or an array of strings
+     */
+    exclude?: string | string[];
+}
+
+declare function ensureArray<T>(value: T | T[]): T[];
+declare function normalizePath(p: string): string;
+
+/**
+ * @description: Main function to create abbrlink instance
+ * @param options: Configuration options
+ * @returns: Abbrlink instance with methods for different build tools
+ */
+declare function createAbbrlink(options: Options): {
+    initMdsSetAbbrLink: () => Promise<void>;
+    watchMdFiles: () => void;
+    closeWatcher: () => void;
+    setAbbrLink: (path: string | string[]) => Promise<void>;
+    getVitePlugin: () => {
+        name: string;
+        buildStart(): Promise<void>;
+        configResolved(): Promise<void>;
+        closeBundle(): void;
+    };
+    getAstroIntegration: () => {
+        name: string;
+        hooks: {
+            'astro:build:start': () => Promise<void>;
+            'astro:server:start': () => Promise<void>;
+            'astro:server:stop': () => Promise<void>;
+        };
+    };
+    getNextjsPlugin: () => {
+        name: string;
+        module(_module: any): Promise<any>;
+    };
+    getNuxtModule: () => {
+        name: string;
+        setup(): void;
+    };
+    getGatsbyPlugin: () => {
+        name: string;
+        onPreBootstrap(): Promise<void>;
+        onCreateNode({ node }: any): Promise<void>;
+    };
+    getHexoPlugin: () => {
+        name: string;
+        init(hexo: any): void;
+    };
+    getEleventyPlugin: () => {
+        name: string;
+        init(eleventyConfig: any): void;
+    };
+    getVuePressPlugin: () => {
+        name: string;
+        onInitialized(): void;
+        extendsMarkdown(md: any): void;
+    };
+    getSvelteKitPlugin: () => {
+        name: string;
+        handle({ event, resolve }: any): Promise<any>;
+    };
+    getRemixPlugin: () => {
+        name: string;
+        buildStart(): Promise<void>;
+    };
+};
+
+export { type Options, createAbbrlink as default, ensureArray, normalizePath };

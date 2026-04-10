@@ -1,11 +1,19 @@
 import { Options } from 'abbrlink'
 import createAbbrlink from 'abbrlink'
 
-export function withAbbrlink(remixConfig: any, options: Options) {
+const remixPlugin = (options: Options) => {
   const abbrlinkInstance = createAbbrlink(options)
-  const plugin = abbrlinkInstance.getRemixPlugin()
+  return {
+    name: 'remix-plugin-abbrlink',
+    async buildStart() {
+      await abbrlinkInstance.initMdsSetAbbrLink()
+    },
+  }
+}
+
+export function withAbbrlink(remixConfig: any, options: Options) {
+  const plugin = remixPlugin(options)
   
-  // Add the plugin to the Remix config
   if (!remixConfig.plugins) {
     remixConfig.plugins = []
   }
@@ -15,6 +23,5 @@ export function withAbbrlink(remixConfig: any, options: Options) {
 }
 
 export default function remixPluginAbbrlink(options: Options) {
-  const abbrlinkInstance = createAbbrlink(options)
-  return abbrlinkInstance.getRemixPlugin()
+  return remixPlugin(options)
 }

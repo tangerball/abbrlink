@@ -1,0 +1,26 @@
+/**
+ * @description:  Abbreviated link configuration
+ */
+interface AbbrLinkConfig {
+    /**
+     * @description:  Algorithm
+     * @default 'crc32'
+     */
+    alg: 'crc32' | 'crc16';
+}
+
+interface Options extends AbbrLinkConfig {
+    /**
+     * @description: The file of the article
+     */
+    paths: string | string[];
+}
+
+declare const _default: ({ paths, ...data }: Options) => {
+    initMdsSetAbbrLink: () => Promise<void>;
+    watchMdFiles: () => void;
+    closeWatcher: () => void;
+    setAbbrLink: (path: string | string[]) => Promise<void>;
+};
+
+export { type Options, _default as default };
